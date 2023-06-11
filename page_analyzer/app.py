@@ -20,6 +20,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET KEY')
 app.secret_key = os.getenv('SECRET_KEY')
 session['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
+
 class DataConn:
 
     def __init__(self, db_name):
