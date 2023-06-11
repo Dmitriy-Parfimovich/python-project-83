@@ -2,6 +2,11 @@ PORT ?= 8000
 start:
 	poetry run gunicorn -w 5 -b 0.0.0.0:$(PORT) page_analyzer:app
 
+railway-start:
+	poetry run gunicorn -w 5 -b 0.0.0.0:$(PORT) page_analyzer:app
+	PGPASSWORD=PGPASSWORD psql -h containers-us-west-161.railway.app -U postgres -p 7738 -d railway
+	railway < database.sql
+
 all: db-create schema-load
 
 dev-setup: db-reset schema-load
