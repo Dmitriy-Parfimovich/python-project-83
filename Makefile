@@ -19,7 +19,7 @@ schema-load:
 	psql mydb < database.sql
 
 connect:
-	psql -d mydb
+	psql -d railway
 
 install:
 		poetry install
