@@ -1,7 +1,6 @@
 PORT ?= 8000
 railway-start:
-	psql -h containers-us-west-161.railway.app -U postgres -p 7738 -d railway
-	PGPASSWORD psql -h containers-us-west-161.railway.app -U postgres -p 7738 -d railway
+	PGPASSWORD=BqfMAdlIpU443KTO4QYR psql -h containers-us-west-161.railway.app -U postgres -p 7738 -d railway
 	dropdb railway || true
 	createdb railway
 	railway < database.sql
