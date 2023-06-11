@@ -16,9 +16,7 @@ app = Flask(__name__)
 
 load_dotenv()
 DATABASE_URL = os.getenv('DATABASE_URL')
-app.config['SECRET_KEY'] = os.getenv('SECRET KEY')
-# app.secret_key = os.getenv('SECRET_KEY')
-# session['SECRET_KEY'] = os.getenv('SECRET_KEY')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 
 
 class DataConn:
