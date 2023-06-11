@@ -1,7 +1,10 @@
 PORT ?= 8000
-start:
-	make connect
+railway-start:
+	make railway-connect
 	make dev-setup
+	poetry run gunicorn -w 5 -b 0.0.0.0:$(PORT) page_analyzer:app
+
+start:
 	poetry run gunicorn -w 5 -b 0.0.0.0:$(PORT) page_analyzer:app
 
 all: db-create schema-load
@@ -19,7 +22,10 @@ schema-load:
 	psql mydb < database.sql
 
 connect:
-	psql -d railway
+	psql -d mydb
+
+railway-connect:
+	railway connect
 
 install:
 		poetry install
