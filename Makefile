@@ -1,6 +1,5 @@
 PORT ?= 8000
 railway-start:
-	railway connect Postgres
 	psql -h containers-us-west-161.railway.app -U postgres -p 7738 -d railway
 	dropdb railway || true
 	createdb railway
