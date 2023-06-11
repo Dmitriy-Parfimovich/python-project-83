@@ -1,7 +1,7 @@
 PORT ?= 8000
 start:
-	make dev-setup
 	poetry run gunicorn -w 5 -b 0.0.0.0:$(PORT) page_analyzer:app
+	make dev-setup
 
 all: db-create schema-load
 
