@@ -44,17 +44,64 @@ def index():
 
 @app.route('/urls/<id>')
 def url_page(id):
+    url_checks_list = []
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT name FROM urls WHERE id = (%s)', (id,))
-        new_url = cursor.fetchone()[0]
-        cursor.execute('SELECT created_at FROM urls WHERE id = (%s)', (id,))
-        created_at = cursor.fetchone()[0]
-        cursor.close()
+        cursor.execute('SELECT EXISTS (SELECT url_checks.url_id\
+                       FROM url_checks JOIN urls ON\
+                       url_checks.url_id = urls.id\
+                       WHERE urls.id = (%s))', (id,))
+        if cursor.fetchone()[0]:
+            cursor.execute('SELECT urls.id, urls.name, urls.created_at,\
+                           url_checks.id, url_checks.status_code,\
+                           url_checks.h1, url_checks.title,\
+                           url_checks.description, url_checks.created_at\
+                           FROM urls JOIN url_checks\
+                           ON urls.id = url_checks.url_id\
+                           WHERE urls.id = (%s)', (id,))
+            url_checks_work_list = cursor.fetchall()
+            url_checks_list = sorted([{'id': item[0], 'url_name': item[1],
+                                       'created_at': item[2],
+                                       'checks_id': item[3],
+                                       'checks_status_code': item[4],
+                                       'checks_h1': item[5],
+                                       'checks_title': item[6],
+                                       'checks_description': item[7],
+                                       'checks_created_at': item[8]}
+                                      for item in url_checks_work_list],
+                                     key=lambda k: k['checks_id'],
+                                     reverse=True)
+            for item in url_checks_list:
+                new_url = item['url_name']
+                created_at = item['created_at']
+                break
+            cursor.close()
+        else:
+            cursor.execute('SELECT name FROM urls WHERE id = (%s)', (id,))
+            new_url = cursor.fetchone()[0]
+            cursor.execute('SELECT created_at FROM urls\
+                           WHERE id = (%s)', (id,))
+            created_at = cursor.fetchone()[0]
+            cursor.close()
         print([id, new_url, created_at])
-    messages = get_flashed_messages(with_categories=True)
+        print(url_checks_list)
+        messages = get_flashed_messages(with_categories=True)
     return render_template('url_page.html', messages=messages, id=id,
-                           new_url=new_url, created_at=created_at)
+                           new_url=new_url, created_at=created_at,
+                           url_checks_list=url_checks_list)
+
+
+@app.route('/urls/<id>/checks', methods=['POST'])
+def url_checks(id):
+    created_at = date.today()
+    with DataConn(DATABASE_URL) as conn:
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO url_checks (url_id, created_at)\
+                       VALUES (%s, %s)', (id, created_at))
+        conn.commit()
+        cursor.close()
+    flash('Страница успешно проверена', 'success')
+    return redirect(url_for('url_page', id=id), code=302)
 
 
 @app.route('/urls')
@@ -62,12 +109,24 @@ def urls():
     urls = []
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT * FROM urls')
+        cursor.execute('SELECT * FROM (SELECT urls.id, urls.name,\
+                       url_checks.created_at, url_checks.status_code,\
+                       url_checks.id, RANK() OVER (PARTITION BY\
+                       urls.id ORDER BY url_checks.id DESC)\
+                       FROM urls LEFT OUTER JOIN url_checks ON\
+                       urls.id = url_checks.url_id) AS urls_rank\
+                       WHERE rank = 1')
         list_of_urls = cursor.fetchall()
         cursor.close()
         print(list_of_urls)
-    urls = sorted([{'id': item[0], 'name': item[1]} for item in list_of_urls],
+    urls = sorted([{'id': item[0], 'name': item[1], 'created_at': item[2],
+                    'status_code': item[3]} for item in list_of_urls],
                   key=lambda k: k['id'], reverse=True)
+    for item in urls:
+        for key in item.keys():
+            if item[key] is None:
+                item[key] = ''
+    print(urls)
     return render_template('urls.html', urls=urls)
 
 
