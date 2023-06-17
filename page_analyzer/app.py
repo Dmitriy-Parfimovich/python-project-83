@@ -11,6 +11,8 @@ from datetime import date
 import validators
 import psycopg2
 import os
+import requests
+
 
 app = Flask(__name__)
 
@@ -96,11 +98,22 @@ def url_checks(id):
     created_at = date.today()
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO url_checks (url_id, created_at)\
-                       VALUES (%s, %s)', (id, created_at))
-        conn.commit()
-        cursor.close()
-    flash('Страница успешно проверена', 'success')
+        cursor.execute('SELECT name FROM urls WHERE id = (%s)', (id,))
+        name = cursor.fetchone()[0]
+        print(name)
+        try:
+            r = requests.get(name)
+        except requests.exceptions.RequestException:
+            cursor.close()
+            flash('Произошла ошибка при проверке', 'error')
+            return redirect(url_for('url_page', id=id), code=302)
+        else:
+            cursor.execute('INSERT INTO url_checks (url_id, status_code,\
+                           created_at) VALUES (%s, %s, %s)',
+                           (id, r.status_code, created_at))
+            conn.commit()
+            cursor.close()
+            flash('Страница успешно проверена', 'success')
     return redirect(url_for('url_page', id=id), code=302)
 
 

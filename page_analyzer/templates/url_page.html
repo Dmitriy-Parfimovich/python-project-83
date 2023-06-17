@@ -21,7 +21,11 @@
 </nav>
   {% if messages %}
     {% for category, message in messages %}
-      <div class="alert alert-success" role="alert">{{ message }}</div>
+      {% if category == "success" %}
+        <div class="alert alert-success" role="alert">{{ message }}</div>
+      {% else %}
+      <div class="alert alert-danger" role="alert">{{ message }}</div>
+      {% endif %}
     {% endfor %}
   {% endif %}
 
@@ -74,7 +78,7 @@
         {% for url_check in url_checks_list %}
         <tr>
           <td>{{ url_check.checks_id }}</td>
-          <td></td>
+          <td>{{ url_check.checks_status_code }}</td>
           <td></td>
           <td></td>
           <td></td>
