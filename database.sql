@@ -15,4 +15,10 @@ CREATE TABLE url_checks (
   title TEXT,
   description TEXT,
   created_at DATE NOT NULL
-)
+);
+
+/*Railway Postresql Command*/
+/*To remove data from the main table and all tables
+that have foreign key references to the main table,
+please, use:
+TRUNCATE TABLE urls CASCADE;*/

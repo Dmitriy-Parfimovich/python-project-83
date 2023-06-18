@@ -16,6 +16,7 @@ pytest = "^7.3.1"
 psycopg2-binary = "^2.9.6"
 validators = "^0.20.0"
 requests = "^2.31.0"
+beautifulsoup4 = "^4.12.2"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^6.0.0"
