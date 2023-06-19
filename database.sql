@@ -21,4 +21,7 @@ CREATE TABLE url_checks (
 /*To remove data from the main table and all tables
 that have foreign key references to the main table,
 please, use:
-TRUNCATE TABLE urls CASCADE;*/
+1 step - DROP TABLE IF EXISTS url_checks;
+2 step - DROP TABLE IF EXISTS urls;
+(TRUNCATE TABLE urls CASCADE; - deletes data from tables, 
+but with empty tables, the column "id" does not start from "1"*/

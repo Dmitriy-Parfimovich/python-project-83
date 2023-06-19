@@ -83,10 +83,7 @@ def url_page(id):
                 new_url = item['url_name']
                 created_at = item['created_at']
                 break
-            for item in url_checks_list:
-                for key in item.keys():
-                    if item[key] is None:
-                        item[key] = ''
+            url_checks_list = replace_None(url_checks_list)
             cursor.close()
 
         else:
@@ -126,10 +123,19 @@ def url_checks(id):
         else:
             soup = BeautifulSoup(resp.text, 'html.parser')
             url_status_code = resp.status_code
-            url_h1 = soup.h1.string
-            url_title = soup.title.string
-            url_description = soup.find('meta', {'name':
-                                                 'description'}).get('content')
+            if soup.h1:
+                url_h1 = soup.h1.string
+            else:
+                url_h1 = ''
+            if soup.title:
+                url_title = soup.title.string
+            else:
+                url_title = ''
+            if soup.find('meta', {'name': 'description'}):
+                url_description = soup.find(
+                    'meta', {'name': 'description'}).get('content')
+            else:
+                url_description = ''
             cursor.execute('INSERT INTO url_checks\
                            (url_id, status_code, h1, title, description,\
                            created_at) VALUES (%s, %s, %s, %s, %s, %s)',
@@ -163,10 +169,7 @@ def urls():
     urls = sorted([{'id': item[0], 'name': item[1], 'created_at': item[2],
                     'status_code': item[3]} for item in list_of_urls],
                   key=lambda k: k['id'], reverse=True)
-    for item in urls:
-        for key in item.keys():
-            if item[key] is None:
-                item[key] = ''
+    urls = replace_None(urls)
     print(urls)
 
     return render_template('urls.html', urls=urls)
@@ -217,6 +220,14 @@ def add_url():
     flash('Страница успешно добавлена', 'success')
 
     return redirect(url_for('url_page', id=id), code=302)
+
+
+def replace_None(list_of_dicts):
+    for item in list_of_dicts:
+        for key in item.keys():
+            if item[key] is None:
+                item[key] = ''
+    return list_of_dicts
 
 
 if __name__ == "__main__":
