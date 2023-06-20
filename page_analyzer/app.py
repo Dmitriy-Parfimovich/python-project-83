@@ -187,16 +187,16 @@ def add_url():
     elif not work_url.scheme and len(work_url) > 255:
         flash('Некорректный URL', 'error')
         flash('URL превышает 255 символов', 'error')
-        return redirect(url_for('index'), code=302)
+        return redirect(url_for('index'), code=422)
     valid_new_url_flag = validators.url(new_url)
     if len(new_url) > 255:
         flash('URL превышает 255 символов', 'error')
         if not valid_new_url_flag:
             flash('Некорректный URL', 'error')
-        return redirect(url_for('index'), code=302)
+        return redirect(url_for('index'), code=422)
     elif not valid_new_url_flag:
         flash('Некорректный URL', 'error')
-        return redirect(url_for('index'), code=302)
+        return redirect(url_for('index'), code=422)
 # ------------------------------------------------------------------------
 
     with DataConn(DATABASE_URL) as conn:
