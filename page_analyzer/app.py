@@ -123,33 +123,35 @@ def url_checks(id):
             cursor.close()
             flash('Произошла ошибка при проверке', 'error')
             messages = get_flashed_messages(with_categories=True)
-            return render_template('url_page.html', id=id, messages=messages,
+            return render_template('url_page.html', messages=messages, id=id,
                                    new_url=name, created_at=created_at), 422
         else:
-            soup = BeautifulSoup(resp.text, 'html.parser')
             url_status_code = resp.status_code
-            if soup.h1:
-                url_h1 = soup.h1.string
+            if url_status_code == 200:
+                soup = BeautifulSoup(resp.text, 'html.parser')
+                if soup.h1:
+                    url_h1 = soup.h1.string
+                else:
+                    url_h1 = ''
+                if soup.title:
+                    url_title = soup.title.string
+                else:
+                    url_title = ''
+                if soup.find('meta', {'name': 'description'}):
+                    url_description = soup.find(
+                        'meta', {'name': 'description'}).get('content')
+                else:
+                    url_description = ''
+                cursor.execute('INSERT INTO url_checks\
+                               (url_id, status_code, h1, title, description,\
+                               created_at) VALUES (%s, %s, %s, %s, %s, %s)',
+                               (id, url_status_code, url_h1, url_title,
+                                url_description, created_at))
+                conn.commit()
+                cursor.close()
+                flash('Страница успешно проверена', 'success')
             else:
-                url_h1 = ''
-            if soup.title:
-                url_title = soup.title.string
-            else:
-                url_title = ''
-            if soup.find('meta', {'name': 'description'}):
-                url_description = soup.find(
-                    'meta', {'name': 'description'}).get('content')
-            else:
-                url_description = ''
-            cursor.execute('INSERT INTO url_checks\
-                           (url_id, status_code, h1, title, description,\
-                           created_at) VALUES (%s, %s, %s, %s, %s, %s)',
-                           (id, url_status_code, url_h1, url_title,
-                            url_description, created_at))
-            conn.commit()
-            cursor.close()
-            flash('Страница успешно проверена', 'success')
-
+                flash('Произошла ошибка при проверке', 'error')
     return redirect(url_for('url_page', id=id), code=302)
 
 

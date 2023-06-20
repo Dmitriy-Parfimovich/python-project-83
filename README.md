@@ -1,9 +1,10 @@
 [![Hexlet Ltd. logo](https://beribuy.ru/uploads/blog-ck/59ece66cc0acd6a69b64bdbefeefab2f.webp)](https://ru.hexlet.io/pages/about?utm_source=github&utm_medium=link&utm_campaign=python-package)
 
-<h1 align="center">The Difference generation package</h1>
+<h1 align="center">The Page Analyzer project</h1>
 
 [![Actions Status](https://github.com/Dmitriy-Parfimovich/python-project-83/workflows/hexlet-check/badge.svg)](https://github.com/Dmitriy-Parfimovich/python-project-83/actions)
 [![Workflow status](https://github.com/Dmitriy-Parfimovich/python-project-83/actions/workflows/page_analyzer-check.yml/badge.svg)](https://github.com/Dmitriy-Parfimovich/python-project-83/actions)
+[![Maintainability](https://api.codeclimate.com/v1/badges/888016edb1a8276a77bf/maintainability)](https://codeclimate.com/github/Dmitriy-Parfimovich/python-project-83/maintainability)
 
 This is a hexlet courses educational project.
 The Page Analyzer is a website that analyzes the specified pages for SEO suitability.
@@ -17,7 +18,7 @@ The project is based on **Flask**: HTTP-requests and routing. The results of the
 You can see a deployed application [here](https://python-project-83-production-6014.up.railway.app)
 
 ## Web application demo
-(./README.gif)
+![README.gif](./README.gif)
 
 ## Instalation
 
