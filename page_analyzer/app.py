@@ -117,9 +117,14 @@ def url_checks(id):
         try:
             resp = requests.get(name)
         except requests.exceptions.RequestException:
+            cursor.execute('SELECT created_at FROM urls\
+                           WHERE id = (%s)', (id,))
+            created_at = cursor.fetchone()[0]
             cursor.close()
             flash('Произошла ошибка при проверке', 'error')
-            return redirect(url_for('url_page', id=id), code=302)
+            messages = get_flashed_messages(with_categories=True)
+            return render_template('url_page.html', id=id, messages=messages,
+                                   new_url=name, created_at=created_at), 422
         else:
             soup = BeautifulSoup(resp.text, 'html.parser')
             url_status_code = resp.status_code
