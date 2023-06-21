@@ -29,14 +29,10 @@ class DataConn:
 
     def __enter__(self):
         self.conn = psycopg2.connect(self.db_name)
-        print('Database connection established')
         return self.conn
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.conn.close()
-        print('Database connection is closed')
-        if exc_val:
-            raise
 
 
 @app.route('/')
@@ -94,8 +90,6 @@ def url_page(id):
             created_at = cursor.fetchone()[0]
             cursor.close()
 
-        print([id, new_url, created_at])
-        print(url_checks_list)
         messages = get_flashed_messages(with_categories=True)
 
     return render_template('url_page.html', messages=messages, id=id,
@@ -112,7 +106,6 @@ def url_checks(id):
         cursor = conn.cursor()
         cursor.execute('SELECT name FROM urls WHERE id = (%s)', (id,))
         name = cursor.fetchone()[0]
-        print(name)
 
         try:
             resp = requests.get(name)
@@ -172,12 +165,10 @@ def urls():
         list_of_urls = cursor.fetchall()
         cursor.close()
 
-    print(list_of_urls)
     urls = sorted([{'id': item[0], 'name': item[1], 'created_at': item[2],
                     'status_code': item[3]} for item in list_of_urls],
                   key=lambda k: k['id'], reverse=True)
     urls = replace_None(urls)
-    print(urls)
 
     return render_template('urls.html', urls=urls)
 
@@ -238,7 +229,3 @@ def replace_None(list_of_dicts):
             if item[key] is None:
                 item[key] = ''
     return list_of_dicts
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
