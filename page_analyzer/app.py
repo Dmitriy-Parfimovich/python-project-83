@@ -5,10 +5,14 @@ from flask import (
     url_for, render_template,
     request, redirect
 )
+from page_analyzer.DB_queries import (
+    get_DB_select_from_table, get_DB_url_page,
+    get_DB_insert_to_table
+)
+from page_analyzer.parsing_url import parsing_url
 from dotenv import load_dotenv
 from urllib.parse import urlparse
 from datetime import date
-from bs4 import BeautifulSoup
 import validators
 import psycopg2
 import os
@@ -47,50 +51,30 @@ def index():
 def url_page(id):
 
     url_checks_list = []
+    result_DB_query = get_DB_url_page(id)
 
-    with DataConn(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT EXISTS (SELECT url_checks.url_id\
-                       FROM url_checks JOIN urls ON\
-                       url_checks.url_id = urls.id\
-                       WHERE urls.id = (%s))', (id,))
+    if type(result_DB_query) is list:
+        url_checks_list = sorted([{'id': item[0], 'url_name': item[1],
+                                   'created_at': item[2],
+                                   'checks_id': item[3],
+                                   'checks_status_code': item[4],
+                                   'checks_h1': item[5],
+                                   'checks_title': item[6],
+                                   'checks_description': item[7],
+                                   'checks_created_at': item[8]}
+                                 for item in result_DB_query],
+                                 key=lambda k: k['checks_id'],
+                                 reverse=True)
+        for item in url_checks_list:
+            new_url = item['url_name']
+            created_at = item['created_at']
+            break
+        url_checks_list = replace_None(url_checks_list)
 
-        if cursor.fetchone()[0]:
-            cursor.execute('SELECT urls.id, urls.name, urls.created_at,\
-                           url_checks.id, url_checks.status_code,\
-                           url_checks.h1, url_checks.title,\
-                           url_checks.description, url_checks.created_at\
-                           FROM urls JOIN url_checks\
-                           ON urls.id = url_checks.url_id\
-                           WHERE urls.id = (%s)', (id,))
-            url_checks_work_list = cursor.fetchall()
-            url_checks_list = sorted([{'id': item[0], 'url_name': item[1],
-                                       'created_at': item[2],
-                                       'checks_id': item[3],
-                                       'checks_status_code': item[4],
-                                       'checks_h1': item[5],
-                                       'checks_title': item[6],
-                                       'checks_description': item[7],
-                                       'checks_created_at': item[8]}
-                                      for item in url_checks_work_list],
-                                     key=lambda k: k['checks_id'],
-                                     reverse=True)
-            for item in url_checks_list:
-                new_url = item['url_name']
-                created_at = item['created_at']
-                break
-            url_checks_list = replace_None(url_checks_list)
-            cursor.close()
+    else:
+        new_url, created_at = result_DB_query
 
-        else:
-            cursor.execute('SELECT name FROM urls WHERE id = (%s)', (id,))
-            new_url = cursor.fetchone()[0]
-            cursor.execute('SELECT created_at FROM urls\
-                           WHERE id = (%s)', (id,))
-            created_at = cursor.fetchone()[0]
-            cursor.close()
-
-        messages = get_flashed_messages(with_categories=True)
+    messages = get_flashed_messages(with_categories=True)
 
     return render_template('url_page.html', messages=messages, id=id,
                            new_url=new_url, created_at=created_at,
@@ -102,49 +86,28 @@ def url_checks(id):
 
     created_at = date.today()
 
-    with DataConn(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT name FROM urls WHERE id = (%s)', (id,))
-        name = cursor.fetchone()[0]
+    name = get_DB_select_from_table('name', 'urls', 'id', id)
 
-        try:
-            resp = requests.get(name)
-        except requests.exceptions.RequestException:
-            cursor.execute('SELECT created_at FROM urls\
-                           WHERE id = (%s)', (id,))
-            created_at = cursor.fetchone()[0]
-            cursor.close()
-            flash('Произошла ошибка при проверке', 'error')
-            messages = get_flashed_messages(with_categories=True)
-            return render_template('url_page.html', messages=messages, id=id,
-                                   new_url=name, created_at=created_at), 422
+    try:
+        resp = requests.get(name)
+    except requests.exceptions.RequestException:
+        created_at = get_DB_select_from_table('created_at', 'urls', 'id', id)
+        flash('Произошла ошибка при проверке', 'error')
+        messages = get_flashed_messages(with_categories=True)
+        return render_template('url_page.html', messages=messages, id=id,
+                               new_url=name, created_at=created_at), 422
+    else:
+        url_status_code = resp.status_code
+        if url_status_code == 200:
+            url_h1, url_title, url_description = parsing_url(name)
+            get_DB_insert_to_table('url_checks', 'url_id, status_code, h1,\
+                                   title, description, created_at',
+                                   id, url_status_code, url_h1, url_title,
+                                   url_description, created_at)
+            flash('Страница успешно проверена', 'success')
         else:
-            url_status_code = resp.status_code
-            if url_status_code == 200:
-                soup = BeautifulSoup(resp.text, 'html.parser')
-                if soup.h1:
-                    url_h1 = soup.h1.string
-                else:
-                    url_h1 = ''
-                if soup.title:
-                    url_title = soup.title.string
-                else:
-                    url_title = ''
-                if soup.find('meta', {'name': 'description'}):
-                    url_description = soup.find(
-                        'meta', {'name': 'description'}).get('content')
-                else:
-                    url_description = ''
-                cursor.execute('INSERT INTO url_checks\
-                               (url_id, status_code, h1, title, description,\
-                               created_at) VALUES (%s, %s, %s, %s, %s, %s)',
-                               (id, url_status_code, url_h1, url_title,
-                                url_description, created_at))
-                conn.commit()
-                cursor.close()
-                flash('Страница успешно проверена', 'success')
-            else:
-                flash('Произошла ошибка при проверке', 'error')
+            flash('Произошла ошибка при проверке', 'error')
+
     return redirect(url_for('url_page', id=id), code=302)
 
 
