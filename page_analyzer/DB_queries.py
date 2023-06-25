@@ -40,7 +40,7 @@ def get_DB_select_from_table(item, table, cond, value, check=False):
 
 def get_DB_insert_to_table(table, item, num=0, *values):
     insert_query = f'INSERT INTO {table}({item})\
-                     VALUES (' + '%s, '*num + '%s)'
+                     VALUES (' + '%s, ' * num + '%s)'
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
         cursor.execute(insert_query, values)
