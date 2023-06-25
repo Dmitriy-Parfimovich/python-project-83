@@ -136,7 +136,7 @@ def add_url():
     created_at = date.today()
     new_url = request.form.get('url')
 
-    messages = validation_url(new_url)
+    new_url, messages = validation_url(new_url)
     if messages != []:
         return render_template('index.html', messages=messages), 422
 
