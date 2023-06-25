@@ -1,69 +1,52 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Third project for Hexlet.io">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" 
-    integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
-    <title>Анализатор страниц</title>
-  </head>
-  <body class="min-vh-100 d-flex flex-column">
-  <header class="flex-shrink-0">
-    <nav class="navbar navbar-expand-md navbar-dark bg-dark px-3">
-  <a class="navbar-brand" href="/">Анализатор страниц</a>
-  <div id="navbarNav">
-      <ul class="navbar-nav">
-        <li class="nav-item"><a class="nav-link " href="/urls">Сайты</a></li>
-      </ul>
-    </ul>
-  </div>
-</nav>
-  {% if messages %}
-    {% for category, message in messages %}
-      {% if category == "success" %}
-        <div class="alert alert-success" role="alert">{{ message }}</div>
-      {% else %}
-      <div class="alert alert-danger" role="alert">{{ message }}</div>
-      {% endif %}
-    {% endfor %}
-  {% endif %}
+{% extends "index.html" %}
 
-  </header>
-  
-  
+{% block messages %}
+{% if messages %}
+{% for category, message in messages %}
+{% if category == "success" %}
+<div class="alert alert-success" role="alert">{{ message }}</div>
+{% else %}
+<div class="alert alert-danger" role="alert">{{ message }}</div>
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endblock %}
 
-  <main class="flex-grow-1">
-    <div class="container-lg mt-3">
-      <h1>Сайт: {{ new_url }}</h1>
+{% block h1 %}{{ new_url }}{% endblock %}
 
-    
-  <div class="table-responsive">
-    <table class="table table-bordered table-hover text-nowrap" data-test="url">
-      <tbody>
-        <tr>
-          <td>ID</td>
-          <td>{{ id }}</td>
-        </tr>
-        <tr>
-          <td>Имя</td>
-          <td>{{ new_url }}</td>
-        </tr>
-        <tr>
-          <td>Дата создания</td>
-          <td>{{ created_at }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+{% block row %}{% endblock %}
 
-    <h2 class="mt-5 mb-3">Проверки</h2>
-    <form method="post" action="{{ url_for('url_checks', id=id) }}">
-    <input type="submit" class="btn btn-primary" value="Запустить проверку">
-    </form>
-  
-  <div>
-    <table class="table table-bordered table-hover mt-2" data-test="checks">
+{% block table_responsive %}
+<div class="table-responsive">
+  <table class="table table-bordered table-hover text-nowrap" data-test="url">
+    <tbody>
+      <tr>
+        <td>ID</td>
+        <td>{{ id }}</td>
+      </tr>
+      <tr>
+        <td>Имя</td>
+        <td>{{ new_url }}</td>
+      </tr>
+      <tr>
+        <td>Дата создания</td>
+        <td>{{ created_at }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block mt_5mb_3 %}
+<h2 class="mt-5 mb-3">Проверки</h2>
+<form method="post" action="{{ url_for('url_checks', id=id) }}">
+  <input type="submit" class="btn btn-primary" value="Запустить проверку">
+</form>
+{% endblock %}
+
+{% block tabletable_borderedtable_hovermt_2 %}
+<div>
+  <table class="table table-bordered table-hover mt-2" data-test="checks">
     <thead>
       <tr>
         <th>ID</th>
@@ -74,29 +57,18 @@
         <th>Дата создания</th>
       </tr>
     </thead>
-      <tbody>
-        {% for url_check in url_checks_list %}
-        <tr>
-          <td>{{ url_check.checks_id }}</td>
-          <td>{{ url_check.checks_status_code }}</td>
-          <td>{{ url_check.checks_h1 }}</td>
-          <td>{{ url_check.checks_title }}</td>
-          <td>{{ url_check.checks_description }}</td>
-          <td>{{ url_check.checks_created_at }}</td>
+    <tbody>
+      {% for url_check in url_checks_list %}
+      <tr>
+        <td>{{ url_check.checks_id }}</td>
+        <td>{{ url_check.checks_status_code }}</td>
+        <td>{{ url_check.checks_h1 }}</td>
+        <td>{{ url_check.checks_title }}</td>
+        <td>{{ url_check.checks_description }}</td>
+        <td>{{ url_check.checks_created_at }}</td>
       </tr>
       {% endfor %}
     </tbody>
-    </table>
-  </div>
-
-    </div>
-  </main>
-  <footer class="border-top py-3 mt-5 flex-shrink-0">
-  <div class="container-lg">
-    <div class="text-center">
-      <a href="https://ru.hexlet.io/" target="_blank">The Python-educational project by Hexlet.io</a>
-    </div>
-  </div>
-</footer>
-  
-</html>
+  </table>
+</div>
+{% endblock %}
