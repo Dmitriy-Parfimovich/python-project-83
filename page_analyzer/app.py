@@ -6,14 +6,15 @@ from flask import (
     request, redirect
 )
 from page_analyzer.DB_queries import (
-    get_DB_select_from_table, get_DB_url_page,
-    get_DB_insert_to_table
+    get_DB_select_from_table,
+    get_DB_insert_to_table,
+    get_DB_url_page,
+    get_DB_list_of_urls
 )
 from page_analyzer.parsing_url import parsing_url
+from page_analyzer.validation_url import validation_url
 from dotenv import load_dotenv
-from urllib.parse import urlparse
 from datetime import date
-import validators
 import psycopg2
 import os
 import requests
@@ -54,7 +55,8 @@ def url_page(id):
     result_DB_query = get_DB_url_page(id)
 
     if type(result_DB_query) is list:
-        url_checks_list = sorted([{'id': item[0], 'url_name': item[1],
+        url_checks_list = sorted([{'id': item[0],
+                                   'url_name': item[1],
                                    'created_at': item[2],
                                    'checks_id': item[3],
                                    'checks_status_code': item[4],
@@ -85,24 +87,26 @@ def url_page(id):
 def url_checks(id):
 
     created_at = date.today()
-
     name = get_DB_select_from_table('name', 'urls', 'id', id)
 
     try:
         resp = requests.get(name)
+
     except requests.exceptions.RequestException:
         created_at = get_DB_select_from_table('created_at', 'urls', 'id', id)
         flash('Произошла ошибка при проверке', 'error')
         messages = get_flashed_messages(with_categories=True)
+
         return render_template('url_page.html', messages=messages, id=id,
                                new_url=name, created_at=created_at), 422
+
     else:
         url_status_code = resp.status_code
         if url_status_code == 200:
             url_h1, url_title, url_description = parsing_url(name)
             get_DB_insert_to_table('url_checks', 'url_id, status_code, h1,\
                                    title, description, created_at',
-                                   id, url_status_code, url_h1, url_title,
+                                   5, id, url_status_code, url_h1, url_title,
                                    url_description, created_at)
             flash('Страница успешно проверена', 'success')
         else:
@@ -115,21 +119,12 @@ def url_checks(id):
 def urls():
 
     urls = []
-
-    with DataConn(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM (SELECT urls.id, urls.name,\
-                       url_checks.created_at, url_checks.status_code,\
-                       url_checks.id, RANK() OVER (PARTITION BY\
-                       urls.id ORDER BY url_checks.id DESC)\
-                       FROM urls LEFT OUTER JOIN url_checks ON\
-                       urls.id = url_checks.url_id) AS urls_rank\
-                       WHERE rank = 1')
-        list_of_urls = cursor.fetchall()
-        cursor.close()
-
-    urls = sorted([{'id': item[0], 'name': item[1], 'created_at': item[2],
-                    'status_code': item[3]} for item in list_of_urls],
+    list_of_urls = get_DB_list_of_urls()
+    urls = sorted([{'id': item[0],
+                    'name': item[1],
+                    'created_at': item[2],
+                    'status_code': item[3]}
+                  for item in list_of_urls],
                   key=lambda k: k['id'], reverse=True)
     urls = replace_None(urls)
 
@@ -140,46 +135,19 @@ def urls():
 def add_url():
     created_at = date.today()
     new_url = request.form.get('url')
-    work_url = urlparse(new_url)
 
-# ------------------------------------------------------------------------
-    if work_url.scheme:
-        new_url = f'{work_url.scheme}://{work_url.netloc}'.lower()
-    elif not work_url.scheme and len(work_url) > 255:
-        flash('Некорректный URL', 'error')
-        flash('URL превышает 255 символов', 'error')
-        messages = get_flashed_messages(with_categories=True)
+    messages = validation_url(new_url)
+    if messages != []:
         return render_template('index.html', messages=messages), 422
-    valid_new_url_flag = validators.url(new_url)
-    if len(new_url) > 255:
-        flash('URL превышает 255 символов', 'error')
-        if not valid_new_url_flag:
-            flash('Некорректный URL', 'error')
-            messages = get_flashed_messages(with_categories=True)
-        return render_template('index.html', messages=messages), 422
-    elif not valid_new_url_flag:
-        flash('Некорректный URL', 'error')
-        messages = get_flashed_messages(with_categories=True)
-        return render_template('index.html', messages=messages), 422
-# ------------------------------------------------------------------------
 
-    with DataConn(DATABASE_URL) as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT EXISTS (SELECT id FROM urls WHERE name = (%s))',
-                       (new_url,))
+    if get_DB_select_from_table('id', 'urls', 'name', new_url, True):
+        id = get_DB_select_from_table('id', 'urls', 'name', new_url)
+        flash('Страница уже существует', 'success')
+        return redirect(url_for('url_page', id=id), code=302)
 
-        if cursor.fetchone()[0]:
-            cursor.execute('SELECT id FROM urls WHERE name = (%s)', (new_url,))
-            id = cursor.fetchone()[0]
-            flash('Страница уже существует', 'success')
-            return redirect(url_for('url_page', id=id), code=302)
-
-        cursor.execute('INSERT INTO urls (name, created_at) VALUES (%s, %s)',
-                       (new_url, created_at))
-        conn.commit()
-        cursor.execute('SELECT id FROM urls WHERE name = (%s)', (new_url,))
-        id = cursor.fetchone()[0]
-        cursor.close()
+    get_DB_insert_to_table('urls', 'name, created_at',
+                           1, new_url, created_at)
+    id = get_DB_select_from_table('id', 'urls', 'name', new_url)
 
     flash('Страница успешно добавлена', 'success')
 

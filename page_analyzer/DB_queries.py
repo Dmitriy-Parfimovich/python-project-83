@@ -23,19 +23,24 @@ class DataConn:
         self.conn.close()
 
 
-def get_DB_select_from_table(item, table, cond, value):
+def get_DB_select_from_table(item, table, cond, value, check=False):
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
-        cursor.execute(f'SELECT {item} FROM {table} WHERE {cond} = {value}',
-                       (item, table, cond, value))
+        if check is True:
+            select_query = f'SELECT EXISTS (SELECT {item}\
+                            FROM {table} WHERE {cond} = (%s))'
+        else:
+            select_query = f'SELECT {item} FROM {table}\
+                            WHERE {cond} = (%s)'
+        cursor.execute(select_query, (value,))
         result_DB_query = cursor.fetchone()[0]
         cursor.close()
         return result_DB_query
 
 
-def get_DB_insert_to_table(table, item, *values):
+def get_DB_insert_to_table(table, item, num=0, *values):
     insert_query = f'INSERT INTO {table}({item})\
-                     VALUES (%s, %s, %s, %s, %s, %s)'
+                     VALUES (' + '%s, '*num + '%s)'
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
         cursor.execute(insert_query, values)
@@ -67,3 +72,18 @@ def get_DB_url_page(id):
             created_at = get_DB_select_from_table('created_at', 'urls',
                                                   'id', id)
             return (new_url, created_at)
+
+
+def get_DB_list_of_urls():
+    with DataConn(DATABASE_URL) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM (SELECT urls.id, urls.name,\
+                       url_checks.created_at, url_checks.status_code,\
+                       url_checks.id, RANK() OVER (PARTITION BY\
+                       urls.id ORDER BY url_checks.id DESC)\
+                       FROM urls LEFT OUTER JOIN url_checks ON\
+                       urls.id = url_checks.url_id) AS urls_rank\
+                       WHERE rank = 1')
+        list_of_urls = cursor.fetchall()
+        cursor.close()
+    return list_of_urls
