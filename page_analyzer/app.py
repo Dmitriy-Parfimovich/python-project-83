@@ -15,7 +15,6 @@ from page_analyzer.parsing_url import parsing_url
 from page_analyzer.validation_url import validation_url
 from dotenv import load_dotenv
 from datetime import date
-import psycopg2
 import os
 import requests
 
@@ -23,21 +22,7 @@ import requests
 app = Flask(__name__)
 
 load_dotenv()
-DATABASE_URL = os.getenv('DATABASE_URL')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
-
-
-class DataConn:
-
-    def __init__(self, db_name):
-        self.db_name = db_name
-
-    def __enter__(self):
-        self.conn = psycopg2.connect(self.db_name)
-        return self.conn
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.conn.close()
 
 
 @app.route('/')
