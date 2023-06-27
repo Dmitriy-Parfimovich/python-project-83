@@ -3,7 +3,7 @@
 from flask import (
     Flask, flash, get_flashed_messages,
     url_for, render_template,
-    request, redirect
+    request, redirect, abort
 )
 from page_analyzer.DB_queries import (
     get_DB_select_from_table,
@@ -37,35 +37,42 @@ def index():
 def url_page(id):
 
     url_checks_list = []
-    result_DB_query = get_DB_url_page(id)
 
-    if type(result_DB_query) is list:
-        url_checks_list = sorted([{'id': item[0],
-                                   'url_name': item[1],
-                                   'created_at': item[2],
-                                   'checks_id': item[3],
-                                   'checks_status_code': item[4],
-                                   'checks_h1': item[5],
-                                   'checks_title': item[6],
-                                   'checks_description': item[7],
-                                   'checks_created_at': item[8]}
-                                 for item in result_DB_query],
-                                 key=lambda k: k['checks_id'],
-                                 reverse=True)
-        for item in url_checks_list:
-            new_url = item['url_name']
-            created_at = item['created_at']
-            break
-        url_checks_list = replace_None(url_checks_list)
+    try:
+        result_DB_query = get_DB_url_page(id)
+
+    except Exception:
+        abort(404)
 
     else:
-        new_url, created_at = result_DB_query
 
-    messages = get_flashed_messages(with_categories=True)
+        if type(result_DB_query) is list:
+            url_checks_list = sorted([{'id': item[0],
+                                       'url_name': item[1],
+                                       'created_at': item[2],
+                                       'checks_id': item[3],
+                                       'checks_status_code': item[4],
+                                       'checks_h1': item[5],
+                                       'checks_title': item[6],
+                                       'checks_description': item[7],
+                                       'checks_created_at': item[8]}
+                                     for item in result_DB_query],
+                                     key=lambda k: k['checks_id'],
+                                     reverse=True)
+            for item in url_checks_list:
+                new_url = item['url_name']
+                created_at = item['created_at']
+                break
+            url_checks_list = replace_None(url_checks_list)
 
-    return render_template('url_page.html', messages=messages, id=id,
-                           new_url=new_url, created_at=created_at,
-                           url_checks_list=url_checks_list)
+        else:
+            new_url, created_at = result_DB_query
+
+        messages = get_flashed_messages(with_categories=True)
+
+        return render_template('url_page.html', messages=messages, id=id,
+                               new_url=new_url, created_at=created_at,
+                               url_checks_list=url_checks_list)
 
 
 @app.route('/urls/<id>/checks', methods=['POST'])
@@ -123,7 +130,8 @@ def add_url():
 
     new_url, messages = validation_url(new_url)
     if messages != []:
-        return render_template('index.html', messages=messages), 422
+        return render_template('index.html', messages=messages,
+                               new_url=new_url), 422
 
     if get_DB_select_from_table('id', 'urls', 'name', new_url, True):
         id = get_DB_select_from_table('id', 'urls', 'name', new_url)
@@ -137,6 +145,21 @@ def add_url():
     flash('Страница успешно добавлена', 'success')
 
     return redirect(url_for('url_page', id=id), code=302)
+
+
+@app.errorhandler(404)
+def page_not_found(err):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(500)
+def internal_server_error(err):
+    return render_template('500.html'), 500
+
+
+@app.route('/qwe')
+def error500():
+    abort(500)
 
 
 def replace_None(list_of_dicts):

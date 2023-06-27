@@ -11,10 +11,8 @@ import validators
 
 def validation_url(new_url):
     work_url = urlparse(new_url)
-    print(work_url, 'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh')
     if work_url.scheme:
         new_url = f'{work_url.scheme}://{work_url.netloc}'.lower()
-        print(new_url, 'kkkkkkkkkkkkkkkkkkk')
     elif not work_url.scheme and len(work_url) > 255:
         flash('Некорректный URL', 'error')
         flash('URL превышает 255 символов', 'error')
@@ -25,5 +23,7 @@ def validation_url(new_url):
             flash('Некорректный URL', 'error')
     elif not valid_new_url_flag:
         flash('Некорректный URL', 'error')
+        if not new_url:
+            flash('URL обязателен', 'error')
     messages = get_flashed_messages(with_categories=True)
     return new_url, messages
