@@ -12,6 +12,6 @@ def parsing_url(name):
     url_title = soup.title.string if soup.title else ''
     url_description = soup.find(
         'meta', {'name': 'description'}
-        ).get('content') if soup.find('meta',
-                                      {'name': 'description'}) else ''
+    ).get('content') if soup.find('meta',
+                                  {'name': 'description'}) else ''
     return url_h1, url_title, url_description
