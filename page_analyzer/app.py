@@ -1,22 +1,24 @@
 #!/usr/bin/env python
 
+
+import os
+import requests
 from flask import (
     Flask, flash, get_flashed_messages,
     url_for, render_template,
     request, redirect, abort
 )
-from page_analyzer.DB_queries import (
+from page_analyzer.db_queries import (
     get_DB_select_from_table,
     get_DB_insert_to_table,
     get_DB_url_page,
     get_DB_list_of_urls
 )
+from page_analyzer.replace_none import replace_None
 from page_analyzer.parsing_url import parsing_url
 from page_analyzer.validation_url import validation_url
 from dotenv import load_dotenv
 from datetime import date
-import os
-import requests
 
 
 app = Flask(__name__)
@@ -28,9 +30,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 @app.route('/')
 def index():
 
-    messages = get_flashed_messages(with_categories=True)
-
-    return render_template('index.html', messages=messages)
+    return render_template('index.html')
 
 
 @app.route('/urls/<id>')
@@ -46,7 +46,7 @@ def url_page(id):
 
     else:
 
-        if type(result_DB_query) is list:
+        if isinstance(result_DB_query, list):
             url_checks_list = sorted([{'id': item[0],
                                        'url_name': item[1],
                                        'created_at': item[2],
@@ -129,6 +129,7 @@ def add_url():
     new_url = request.form.get('url')
 
     new_url, messages = validation_url(new_url)
+
     if messages != []:
         return render_template('index.html', messages=messages,
                                new_url=new_url), 422
@@ -155,16 +156,3 @@ def page_not_found(err):
 @app.errorhandler(500)
 def internal_server_error(err):
     return render_template('500.html'), 500
-
-
-@app.route('/qwe')
-def error500():
-    abort(500)
-
-
-def replace_None(list_of_dicts):
-    for item in list_of_dicts:
-        for key in item.keys():
-            if item[key] is None:
-                item[key] = ''
-    return list_of_dicts
