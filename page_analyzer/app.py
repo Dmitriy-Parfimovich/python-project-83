@@ -9,12 +9,19 @@ from flask import (
     request, redirect, abort
 )
 from page_analyzer.db_queries import (
-    get_DB_select_from_table,
-    get_DB_insert_to_table,
+    get_DB_select_name,
+    get_DB_select_created_at,
+    get_DB_select_id_exists,
+    get_DB_select_id,
+    get_DB_insert_url_checks,
+    get_DB_insert_add_url,
     get_DB_url_page,
     get_DB_list_of_urls
 )
-from page_analyzer.replace_none import replace_None
+from page_analyzer.formatting_result_db_queries import (
+    get_url_checks_list,
+    get_urls
+)
 from page_analyzer.parsing_url import parsing_url
 from page_analyzer.validation_url import validation_url
 from dotenv import load_dotenv
@@ -47,23 +54,7 @@ def url_page(id):
     else:
 
         if isinstance(result_DB_query, list):
-            url_checks_list = sorted([{'id': item[0],
-                                       'url_name': item[1],
-                                       'created_at': item[2],
-                                       'checks_id': item[3],
-                                       'checks_status_code': item[4],
-                                       'checks_h1': item[5],
-                                       'checks_title': item[6],
-                                       'checks_description': item[7],
-                                       'checks_created_at': item[8]}
-                                     for item in result_DB_query],
-                                     key=lambda k: k['checks_id'],
-                                     reverse=True)
-            for item in url_checks_list:
-                new_url = item['url_name']
-                created_at = item['created_at']
-                break
-            url_checks_list = replace_None(url_checks_list)
+            new_url, created_at, url_checks_list = get_url_checks_list(result_DB_query) # noqa
 
         else:
             new_url, created_at = result_DB_query
@@ -79,13 +70,13 @@ def url_page(id):
 def url_checks(id):
 
     created_at = date.today()
-    name = get_DB_select_from_table('name', 'urls', 'id', id)
+    name = get_DB_select_name(id)
 
     try:
         resp = requests.get(name)
 
     except requests.exceptions.RequestException:
-        created_at = get_DB_select_from_table('created_at', 'urls', 'id', id)
+        created_at = get_DB_select_created_at(id)
         flash('Произошла ошибка при проверке', 'error')
         messages = get_flashed_messages(with_categories=True)
 
@@ -96,10 +87,9 @@ def url_checks(id):
         url_status_code = resp.status_code
         if url_status_code == 200:
             url_h1, url_title, url_description = parsing_url(name)
-            get_DB_insert_to_table('url_checks', 'url_id, status_code, h1,\
-                                   title, description, created_at',
-                                   5, id, url_status_code, url_h1, url_title,
-                                   url_description, created_at)
+            get_DB_insert_url_checks(id, url_status_code, url_h1,
+                                     url_title, url_description,
+                                     created_at)
             flash('Страница успешно проверена', 'success')
         else:
             flash('Произошла ошибка при проверке', 'error')
@@ -112,13 +102,7 @@ def urls():
 
     urls = []
     list_of_urls = get_DB_list_of_urls()
-    urls = sorted([{'id': item[0],
-                    'name': item[1],
-                    'created_at': item[2],
-                    'status_code': item[3]}
-                  for item in list_of_urls],
-                  key=lambda k: k['id'], reverse=True)
-    urls = replace_None(urls)
+    urls = get_urls(list_of_urls)
 
     return render_template('urls.html', urls=urls)
 
@@ -134,14 +118,13 @@ def add_url():
         return render_template('index.html', messages=messages,
                                new_url=new_url), 422
 
-    if get_DB_select_from_table('id', 'urls', 'name', new_url, True):
-        id = get_DB_select_from_table('id', 'urls', 'name', new_url)
+    if get_DB_select_id_exists(new_url):
+        id = get_DB_select_id(new_url)
         flash('Страница уже существует', 'success')
         return redirect(url_for('url_page', id=id), code=302)
 
-    get_DB_insert_to_table('urls', 'name, created_at',
-                           1, new_url, created_at)
-    id = get_DB_select_from_table('id', 'urls', 'name', new_url)
+    get_DB_insert_add_url(new_url, created_at)
+    id = get_DB_select_id(new_url)
 
     flash('Страница успешно добавлена', 'success')
 

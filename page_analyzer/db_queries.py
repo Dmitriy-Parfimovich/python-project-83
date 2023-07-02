@@ -23,24 +23,57 @@ class DataConn:
         self.conn.close()
 
 
-def get_DB_select_from_table(item, table, cond, value, check=False):
+def get_DB_select_name(id):
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
-        if check is True:
-            select_query = f'SELECT EXISTS (SELECT {item}\
-                            FROM {table} WHERE {cond} = (%s))'
-        else:
-            select_query = f'SELECT {item} FROM {table}\
-                            WHERE {cond} = (%s)'
-        cursor.execute(select_query, (value,))
+        cursor.execute('SELECT name FROM urls WHERE id = (%s)', (id,))
         result_DB_query = cursor.fetchone()[0]
         cursor.close()
-        return result_DB_query
+    return result_DB_query
 
 
-def get_DB_insert_to_table(table, item, num=0, *values):
-    insert_query = f'INSERT INTO {table}({item})\
-                     VALUES (' + '%s, ' * num + '%s)'
+def get_DB_select_id_exists(new_url):
+    with DataConn(DATABASE_URL) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT EXISTS (SELECT id FROM urls\
+                       WHERE name = (%s))', (new_url,))
+        result_DB_query = cursor.fetchone()[0]
+        cursor.close()
+    return result_DB_query
+
+
+def get_DB_select_id(new_url):
+    with DataConn(DATABASE_URL) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM urls WHERE name = (%s)', (new_url,))
+        result_DB_query = cursor.fetchone()[0]
+        cursor.close()
+    return result_DB_query
+
+
+def get_DB_select_created_at(id):
+    with DataConn(DATABASE_URL) as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT created_at FROM urls WHERE id = (%s)', (id,))
+        result_DB_query = cursor.fetchone()[0]
+        cursor.close()
+    return result_DB_query
+
+
+def get_DB_insert_url_checks(*values):
+    insert_query = 'INSERT INTO url_checks(url_id,\
+                    status_code, h1, title, description,\
+                    created_at) VALUES (%s, %s, %s, %s, %s, %s)'
+    with DataConn(DATABASE_URL) as conn:
+        cursor = conn.cursor()
+        cursor.execute(insert_query, values)
+        conn.commit()
+        cursor.close()
+
+
+def get_DB_insert_add_url(*values):
+    insert_query = 'INSERT INTO urls(name, created_at)\
+                    VALUES (%s, %s)'
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
         cursor.execute(insert_query, values)
@@ -51,27 +84,22 @@ def get_DB_insert_to_table(table, item, num=0, *values):
 def get_DB_url_page(id):
     with DataConn(DATABASE_URL) as conn:
         cursor = conn.cursor()
-        cursor.execute('SELECT EXISTS (SELECT url_checks.url_id\
-                       FROM url_checks JOIN urls ON\
-                       url_checks.url_id = urls.id\
-                       WHERE urls.id = (%s))', (id,))
-
-        if cursor.fetchone()[0]:
-            cursor.execute('SELECT urls.id, urls.name, urls.created_at,\
+        cursor.execute('SELECT urls.id, urls.name, urls.created_at,\
                            url_checks.id, url_checks.status_code,\
                            url_checks.h1, url_checks.title,\
                            url_checks.description, url_checks.created_at\
                            FROM urls JOIN url_checks\
                            ON urls.id = url_checks.url_id\
                            WHERE urls.id = (%s)', (id,))
-            url_checks_work_list = cursor.fetchall()
+        url_checks_work_list = cursor.fetchall()
+        if url_checks_work_list == []:
+            cursor.execute('SELECT name, created_at FROM urls\
+                           WHERE id = (%s)', (id,))
+            name_created_at = cursor.fetchone()
             cursor.close()
-            return url_checks_work_list
-        else:
-            new_url = get_DB_select_from_table('name', 'urls', 'id', id)
-            created_at = get_DB_select_from_table('created_at', 'urls',
-                                                  'id', id)
-            return (new_url, created_at)
+            return name_created_at
+        cursor.close()
+        return url_checks_work_list
 
 
 def get_DB_list_of_urls():
